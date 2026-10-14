@@ -10,11 +10,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import dagger.hilt.android.AndroidEntryPoint
 import io.strlght.estee.ui.settings.SettingsScreen
 import io.strlght.estee.ui.settings.SettingsViewModel
 import io.strlght.estee.ui.theme.EsteeTheme
@@ -23,6 +24,7 @@ import io.strlght.estee.ui.transcribe.TranscriptionViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private val pendingShare = MutableStateFlow<Uri?>(null)
@@ -76,7 +78,7 @@ fun EsteeApp(
 ) {
     val navController = rememberNavController()
     val incomingUri by pendingShare.collectAsStateWithLifecycle()
-    val transcriptionViewModel: TranscriptionViewModel = viewModel()
+    val transcriptionViewModel: TranscriptionViewModel = hiltViewModel()
 
     LaunchedEffect(incomingUri) {
         incomingUri?.let { uri ->
@@ -101,7 +103,7 @@ fun EsteeApp(
         }
         composable(NavRoutes.SETTINGS) {
             SettingsScreen(
-                viewModel = viewModel(),
+                viewModel = hiltViewModel(),
                 onBack = { navController.popBackStack() },
             )
         }

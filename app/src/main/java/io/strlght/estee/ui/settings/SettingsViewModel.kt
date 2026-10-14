@@ -1,15 +1,16 @@
 package io.strlght.estee.ui.settings
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import android.content.Context
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import io.strlght.estee.R
 import io.strlght.estee.data.SettingsRepository
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -20,9 +21,11 @@ data class SettingsUiState(
     val saved: Boolean = false,
 )
 
-class SettingsViewModel(app: Application) : AndroidViewModel(app) {
-
-    private val settings = SettingsRepository(app)
+@HiltViewModel
+class SettingsViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val settings: SettingsRepository,
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
@@ -65,5 +68,5 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun getString(resId: Int, vararg formatArgs: Any?): String =
-        getApplication<Application>().getString(resId, *formatArgs)
+        context.getString(resId, *formatArgs)
 }

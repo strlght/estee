@@ -1,12 +1,14 @@
 package io.strlght.estee.ui.transcribe
 
-import android.app.Application
 import android.content.ContentResolver
+import android.content.Context
 import android.net.Uri
 import android.os.SystemClock
 import android.provider.OpenableColumns
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import io.strlght.estee.R
 import io.strlght.estee.data.Network
 import io.strlght.estee.data.ProgressRequestBody
@@ -17,6 +19,7 @@ import java.net.ConnectException
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -76,9 +79,11 @@ sealed interface TranscriptionUiState {
     ) : TranscriptionUiState
 }
 
-class TranscriptionViewModel(app: Application) : AndroidViewModel(app) {
-
-    private val settings = SettingsRepository(app)
+@HiltViewModel
+class TranscriptionViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val settings: SettingsRepository,
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow<TranscriptionUiState>(TranscriptionUiState.Empty)
     val uiState: StateFlow<TranscriptionUiState> = _uiState
@@ -130,7 +135,7 @@ class TranscriptionViewModel(app: Application) : AndroidViewModel(app) {
     private fun startTranscription(uri: Uri) {
         transcriptionJob?.cancel()
         transcriptionJob = viewModelScope.launch {
-            val resolver = getApplication<Application>().contentResolver
+            val resolver = context.contentResolver
 
             val attachment = runCatching {
                 withContext(Dispatchers.IO) { resolveAttachment(resolver, uri) }
@@ -278,7 +283,7 @@ class TranscriptionViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun stageInCache(resolver: ContentResolver, attachment: AudioAttachment): File {
-        val uploadsDir = File(getApplication<Application>().cacheDir, "uploads")
+        val uploadsDir = File(context.cacheDir, "uploads")
             .apply { mkdirs() }
 
         val safeName = attachment.displayName
@@ -337,7 +342,7 @@ class TranscriptionViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun getString(resId: Int, vararg formatArgs: Any?): String =
-        getApplication<Application>().getString(resId, *formatArgs)
+        context.getString(resId, *formatArgs)
 
     private companion object {
         const val MAX_UPLOAD_BYTES = 500L * 1024 * 1024
