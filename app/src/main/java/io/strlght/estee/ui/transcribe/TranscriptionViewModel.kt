@@ -13,6 +13,7 @@ import io.strlght.estee.R
 import io.strlght.estee.data.Network
 import io.strlght.estee.data.ProgressRequestBody
 import io.strlght.estee.data.SettingsRepository
+import io.strlght.estee.util.runSuspendCatching
 import java.io.File
 import java.io.IOException
 import java.net.ConnectException
@@ -20,7 +21,6 @@ import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import javax.inject.Inject
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
@@ -137,7 +137,7 @@ class TranscriptionViewModel @Inject constructor(
         transcriptionJob = viewModelScope.launch {
             val resolver = context.contentResolver
 
-            val attachment = runCatching {
+            val attachment = runSuspendCatching {
                 withContext(Dispatchers.IO) { resolveAttachment(resolver, uri) }
             }.getOrElse { error ->
                 _uiState.value = TranscriptionUiState.Failure(null, describe(error))
@@ -159,8 +159,8 @@ class TranscriptionViewModel @Inject constructor(
                 elapsedMs = 0L,
             )
 
-            val staged = withContext(Dispatchers.IO) {
-                runCatching { stageInCache(resolver, attachment) }
+            val staged = runSuspendCatching {
+                withContext(Dispatchers.IO) { stageInCache(resolver, attachment) }
             }.getOrElse { error ->
                 _uiState.value = TranscriptionUiState.Failure(attachment, describe(error))
                 return@launch
@@ -204,11 +204,10 @@ class TranscriptionViewModel @Inject constructor(
                 }
             }
             try {
-                transcribe(endpoint, attachment, staged)
-            } catch (cancellation: CancellationException) {
-                throw cancellation
-            } catch (error: Exception) {
-                _uiState.value = TranscriptionUiState.Failure(attachment, describe(error))
+                runSuspendCatching { transcribe(endpoint, attachment, staged) }
+                    .onFailure { error ->
+                        _uiState.value = TranscriptionUiState.Failure(attachment, describe(error))
+                    }
             } finally {
                 timer.cancel()
             }
