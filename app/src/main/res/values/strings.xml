@@ -27,4 +27,29 @@
     <string name="settings_saved">Server URL saved</string>
     <string name="error_url_empty">URL must not be empty</string>
     <string name="error_url_invalid">Not a valid URL — include http:// or https://</string>
+
+    <string name="empty_title">Share an audio file with Estee</string>
+    <string name="empty_body">Open a voice recording, audio message or sound file in another app and share it here — Estee sends it to your whisper.cpp server and shows you the transcript.</string>
+    <string name="empty_set_server_url">Set server URL</string>
+
+    <string name="phase_preparing">Preparing file…</string>
+    <string name="phase_uploading">Uploading…</string>
+    <string name="phase_uploading_percent">Uploading… %1$d%%</string>
+    <string name="phase_transcribing">Transcribing… %1$s</string>
+
+    <string name="failure_title">Transcription failed</string>
+
+    <plurals name="segment_count">
+        <item quantity="one">%1$d segment</item>
+        <item quantity="other">%1$d segments</item>
+    </plurals>
+
+    <string name="clipboard_label_transcript">Transcript</string>
+    <string name="share_transcript_chooser">Share transcript</string>
+
+    <string name="action_copy">Copy</string>
+    <string name="action_share">Share</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_dismiss">Dismiss</string>
+    <string name="action_cancel">Cancel</string>
 </resources>

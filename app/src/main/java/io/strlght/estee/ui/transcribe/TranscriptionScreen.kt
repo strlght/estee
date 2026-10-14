@@ -44,11 +44,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.strlght.estee.R
 import java.util.Locale
 import kotlinx.coroutines.launch
 
@@ -65,10 +68,10 @@ fun TranscriptionScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Estee") },
+                title = { Text(stringResource(R.string.app_name)) },
                 actions = {
                     IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                        Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.title_settings))
                     }
                 },
             )
@@ -120,15 +123,13 @@ private fun EmptyContent(
         )
         Spacer(Modifier.height(24.dp))
         Text(
-            text = "Share an audio file with Estee",
+            text = stringResource(R.string.empty_title),
             style = MaterialTheme.typography.titleLarge,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Open a voice recording, audio message or sound file in another app " +
-                "and share it here — Estee sends it to your whisper.cpp server " +
-                "and shows you the transcript.",
+            text = stringResource(R.string.empty_body),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -136,7 +137,7 @@ private fun EmptyContent(
         if (!endpointConfigured) {
             Spacer(Modifier.height(24.dp))
             Button(onClick = onOpenSettings) {
-                Text("Set server URL")
+                Text(stringResource(R.string.empty_set_server_url))
             }
         }
     }
@@ -185,7 +186,7 @@ private fun WorkingContent(
                         LinearProgressIndicator(Modifier.fillMaxWidth())
                         Spacer(Modifier.height(12.dp))
                         Text(
-                            text = "Preparing file…",
+                            text = stringResource(R.string.phase_preparing),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
@@ -201,8 +202,8 @@ private fun WorkingContent(
                         Spacer(Modifier.height(12.dp))
                         Text(
                             text = state.uploadProgress
-                                ?.let { "Uploading… ${(it * 100).toInt()}%" }
-                                ?: "Uploading…",
+                                ?.let { stringResource(R.string.phase_uploading_percent, (it * 100).toInt()) }
+                                ?: stringResource(R.string.phase_uploading),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
@@ -218,7 +219,7 @@ private fun WorkingContent(
                             )
                             Spacer(Modifier.width(12.dp))
                             Text(
-                                text = "Transcribing… ${formatElapsed(state.elapsedMs)}",
+                                text = stringResource(R.string.phase_transcribing, formatElapsed(state.elapsedMs)),
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                         }
@@ -228,7 +229,7 @@ private fun WorkingContent(
         }
         Spacer(Modifier.height(16.dp))
         TextButton(onClick = onCancel) {
-            Text("Cancel")
+            Text(stringResource(R.string.action_cancel))
         }
     }
 }
@@ -238,6 +239,8 @@ private fun SuccessContent(state: TranscriptionUiState.Success) {
     val clipboard = LocalClipboard.current
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+    val transcriptLabel = stringResource(R.string.clipboard_label_transcript)
+    val chooserTitle = stringResource(R.string.share_transcript_chooser)
 
     Column(Modifier.fillMaxSize()) {
         LazyColumn(
@@ -257,18 +260,13 @@ private fun SuccessContent(state: TranscriptionUiState.Success) {
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = buildString {
-                            append(state.attachment.displayName)
+                        text = listOfNotNull(
+                            state.attachment.displayName,
                             state.segmentCount?.let {
-                                append(" · ")
-                                append(it)
-                                append(if (it == 1) " segment" else " segments")
-                            }
-                            state.detectedLanguage?.let {
-                                append(" · ")
-                                append(it)
-                            }
-                        },
+                                pluralStringResource(R.plurals.segment_count, it, it)
+                            },
+                            state.detectedLanguage,
+                        ).joinToString(" · "),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -300,7 +298,7 @@ private fun SuccessContent(state: TranscriptionUiState.Success) {
                 onClick = {
                     coroutineScope.launch {
                         clipboard.setClipEntry(
-                            ClipEntry(ClipData.newPlainText("Transcript", state.text)),
+                            ClipEntry(ClipData.newPlainText(transcriptLabel, state.text)),
                         )
                     }
                 },
@@ -308,7 +306,7 @@ private fun SuccessContent(state: TranscriptionUiState.Success) {
             ) {
                 Icon(Icons.Filled.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Copy")
+                Text(stringResource(R.string.action_copy))
             }
             OutlinedButton(
                 onClick = {
@@ -317,14 +315,14 @@ private fun SuccessContent(state: TranscriptionUiState.Success) {
                         putExtra(Intent.EXTRA_TEXT, state.text)
                     }
                     context.startActivity(
-                        Intent.createChooser(share, "Share transcript"),
+                        Intent.createChooser(share, chooserTitle),
                     )
                 },
                 modifier = Modifier.weight(1f),
             ) {
                 Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Share")
+                Text(stringResource(R.string.action_share))
             }
         }
     }
@@ -352,7 +350,7 @@ private fun FailureContent(
         ) {
             Column(Modifier.padding(20.dp)) {
                 Text(
-                    text = "Transcription failed",
+                    text = stringResource(R.string.failure_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -373,9 +371,9 @@ private fun FailureContent(
             Button(onClick = onRetry) {
                 Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Retry")
+                Text(stringResource(R.string.action_retry))
             }
-            TextButton(onClick = onDismiss) { Text("Dismiss") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_dismiss)) }
         }
     }
 }
