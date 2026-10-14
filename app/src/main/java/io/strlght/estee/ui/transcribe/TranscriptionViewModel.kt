@@ -7,6 +7,7 @@ import android.os.SystemClock
 import android.provider.OpenableColumns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import io.strlght.estee.R
 import io.strlght.estee.data.Network
 import io.strlght.estee.data.ProgressRequestBody
 import io.strlght.estee.data.SettingsRepository
@@ -141,7 +142,7 @@ class TranscriptionViewModel(app: Application) : AndroidViewModel(app) {
             if ((attachment.sizeBytes ?: 0L) > MAX_UPLOAD_BYTES) {
                 _uiState.value = TranscriptionUiState.Failure(
                     attachment,
-                    "File is larger than ${MAX_UPLOAD_BYTES / (1024 * 1024)} MB — refusing to upload.",
+                    getString(R.string.error_file_too_large, MAX_UPLOAD_BYTES / (1024 * 1024)),
                 )
                 return@launch
             }
@@ -171,7 +172,7 @@ class TranscriptionViewModel(app: Application) : AndroidViewModel(app) {
         if (endpoint.toHttpUrlOrNull() == null) {
             _uiState.value = TranscriptionUiState.Failure(
                 attachment,
-                "Server URL is not set or invalid. Open Settings to configure it.",
+                getString(R.string.error_server_url_missing),
             )
             return
         }
@@ -248,7 +249,7 @@ class TranscriptionViewModel(app: Application) : AndroidViewModel(app) {
             if (text.isEmpty()) {
                 _uiState.value = TranscriptionUiState.Failure(
                     attachment,
-                    "The server returned an empty transcription.",
+                    getString(R.string.error_empty_transcription),
                 )
             } else {
                 _uiState.value = TranscriptionUiState.Success(
@@ -264,17 +265,14 @@ class TranscriptionViewModel(app: Application) : AndroidViewModel(app) {
                 ?.string()
                 ?.takeIf { it.isNotBlank() }
                 ?.take(400)
+            val reason = if (response.code() == HttpURLConnection.HTTP_BAD_REQUEST) {
+                getString(R.string.error_server_bad_request, response.code())
+            } else {
+                getString(R.string.error_server, response.code())
+            }
             _uiState.value = TranscriptionUiState.Failure(
                 attachment,
-                buildString {
-                    append("Server error ${response.code()}")
-                    if (response.code() == HttpURLConnection.HTTP_BAD_REQUEST) {
-                        append(" — the server rejected the file")
-                    }
-                    if (serverMessage != null) {
-                        append(": $serverMessage")
-                    }
-                },
+                serverMessage?.let { getString(R.string.error_with_detail, reason, it) } ?: reason,
             )
         }
     }
@@ -290,12 +288,12 @@ class TranscriptionViewModel(app: Application) : AndroidViewModel(app) {
         val target = File(uploadsDir, "${System.currentTimeMillis()}_$safeName")
 
         resolver.openInputStream(attachment.uri).use { input ->
-            requireNotNull(input) { "Unable to open the shared file" }
+            requireNotNull(input) { getString(R.string.error_unable_to_open_file) }
             target.outputStream().use { output ->
                 input.copyTo(output, bufferSize = 64 * 1024)
             }
         }
-        require(target.length() > 0L) { "The shared file is empty." }
+        require(target.length() > 0L) { getString(R.string.error_shared_file_empty) }
 
         uploadsDir.listFiles()?.filter { it != target }?.forEach { it.delete() }
 
@@ -329,16 +327,17 @@ class TranscriptionViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun describe(error: Throwable): String = when (error) {
-        is SecurityException ->
-            "Estee lost access to the shared file — please share it again."
-        is UnknownHostException -> "Unknown host — check the server URL in Settings."
-        is ConnectException -> "Could not connect to the server. Is whisper.cpp server running and reachable?"
-        is SocketTimeoutException -> "The request timed out."
-        is SerializationException ->
-            "Server returned an unexpected response (not JSON). Check that the endpoint is a whisper.cpp /inference URL."
-        is IOException -> "Network error: ${error.message}"
-        else -> error.message ?: "Unexpected error: ${error.javaClass.simpleName}"
+        is SecurityException -> getString(R.string.error_lost_access)
+        is UnknownHostException -> getString(R.string.error_unknown_host)
+        is ConnectException -> getString(R.string.error_could_not_connect)
+        is SocketTimeoutException -> getString(R.string.error_timeout)
+        is SerializationException -> getString(R.string.error_bad_response)
+        is IOException -> getString(R.string.error_network, error.message)
+        else -> error.message ?: getString(R.string.error_unexpected, error.javaClass.simpleName)
     }
+
+    private fun getString(resId: Int, vararg formatArgs: Any?): String =
+        getApplication<Application>().getString(resId, *formatArgs)
 
     private companion object {
         const val MAX_UPLOAD_BYTES = 500L * 1024 * 1024

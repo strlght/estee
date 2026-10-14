@@ -29,11 +29,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.strlght.estee.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,6 +46,7 @@ fun SettingsScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val focusManager = LocalFocusManager.current
+    val savedMessage = stringResource(R.string.settings_saved)
 
     fun saveAndCloseKeyboard() {
         viewModel.save()
@@ -52,7 +55,7 @@ fun SettingsScreen(
 
     LaunchedEffect(state.saved) {
         if (state.saved) {
-            snackbarHostState.showSnackbar("Server URL saved")
+            snackbarHostState.showSnackbar(savedMessage)
             viewModel.consumeSaved()
         }
     }
@@ -61,10 +64,13 @@ fun SettingsScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(R.string.title_settings)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back),
+                        )
                     }
                 },
             )
@@ -79,20 +85,19 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
-                text = "Whisper.cpp server",
+                text = stringResource(R.string.settings_server_title),
                 style = MaterialTheme.typography.titleMedium,
             )
             Text(
-                text = "Full endpoint Estee will POST shared audio files to. " +
-                    "For the stock whisper.cpp server example this is the /inference route.",
+                text = stringResource(R.string.settings_server_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             OutlinedTextField(
                 value = state.serverUrl,
                 onValueChange = viewModel::onUrlChange,
-                label = { Text("Endpoint URL") },
-                placeholder = { Text("http://192.168.1.50:8080/inference") },
+                label = { Text(stringResource(R.string.settings_endpoint_label)) },
+                placeholder = { Text(stringResource(R.string.settings_endpoint_placeholder)) },
                 singleLine = true,
                 isError = state.urlError != null,
                 supportingText = state.urlError?.let { { Text(it) } },
@@ -108,7 +113,7 @@ fun SettingsScreen(
             )
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Button(onClick = ::saveAndCloseKeyboard) {
-                    Text("Save")
+                    Text(stringResource(R.string.action_save))
                 }
             }
 

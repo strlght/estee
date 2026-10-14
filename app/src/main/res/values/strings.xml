@@ -1,3 +1,30 @@
 <resources>
     <string name="app_name">Estee</string>
+
+    <string name="error_file_too_large">File is larger than %1$d MB — refusing to upload.</string>
+    <string name="error_server_url_missing">Server URL is not set or invalid. Open Settings to configure it.</string>
+    <string name="error_empty_transcription">The server returned an empty transcription.</string>
+    <string name="error_server">Server error %1$d</string>
+    <string name="error_server_bad_request">Server error %1$d — the server rejected the file</string>
+    <string name="error_with_detail">%1$s: %2$s</string>
+    <string name="error_unable_to_open_file">Unable to open the shared file</string>
+    <string name="error_shared_file_empty">The shared file is empty.</string>
+    <string name="error_lost_access">Estee lost access to the shared file — please share it again.</string>
+    <string name="error_unknown_host">Unknown host — check the server URL in Settings.</string>
+    <string name="error_could_not_connect">Could not connect to the server. Is whisper.cpp server running and reachable?</string>
+    <string name="error_timeout">The request timed out.</string>
+    <string name="error_bad_response">Server returned an unexpected response (not JSON). Check that the endpoint is a whisper.cpp /inference URL.</string>
+    <string name="error_network">Network error: %1$s</string>
+    <string name="error_unexpected">Unexpected error: %1$s</string>
+
+    <string name="title_settings">Settings</string>
+    <string name="action_back">Back</string>
+    <string name="action_save">Save</string>
+    <string name="settings_server_title">Whisper.cpp server</string>
+    <string name="settings_server_description">Full endpoint Estee will POST shared audio files to. For the stock whisper.cpp server example this is the /inference route.</string>
+    <string name="settings_endpoint_label">Endpoint URL</string>
+    <string name="settings_endpoint_placeholder">http://192.168.1.50:8080/inference</string>
+    <string name="settings_saved">Server URL saved</string>
+    <string name="error_url_empty">URL must not be empty</string>
+    <string name="error_url_invalid">Not a valid URL — include http:// or https://</string>
 </resources>

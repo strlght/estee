@@ -3,6 +3,7 @@ package io.strlght.estee.ui.settings
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import io.strlght.estee.R
 import io.strlght.estee.data.SettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -48,9 +49,9 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         val parsed = trimmed.toHttpUrlOrNull()
         when {
             trimmed.isEmpty() ->
-                _uiState.update { it.copy(urlError = "URL must not be empty") }
+                _uiState.update { it.copy(urlError = getString(R.string.error_url_empty)) }
             parsed == null ->
-                _uiState.update { it.copy(urlError = "Not a valid URL — include http:// or https://") }
+                _uiState.update { it.copy(urlError = getString(R.string.error_url_invalid)) }
             else -> viewModelScope.launch {
                 settings.setServerUrl(trimmed)
                 _uiState.update { it.copy(serverUrl = trimmed, urlError = null, saved = true) }
@@ -62,4 +63,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     fun consumeSaved() {
         _uiState.update { it.copy(saved = false) }
     }
+
+    private fun getString(resId: Int, vararg formatArgs: Any?): String =
+        getApplication<Application>().getString(resId, *formatArgs)
 }
