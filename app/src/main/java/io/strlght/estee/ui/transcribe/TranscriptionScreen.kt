@@ -47,7 +47,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -275,13 +274,7 @@ private fun SuccessContent(state: TranscriptionUiState.Success) {
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = listOfNotNull(
-                            state.attachment.displayName,
-                            state.segmentCount?.let {
-                                pluralStringResource(R.plurals.segment_count, it, it)
-                            },
-                            state.detectedLanguage,
-                        ).joinToString(" · "),
+                        text = state.attachment.displayName,
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

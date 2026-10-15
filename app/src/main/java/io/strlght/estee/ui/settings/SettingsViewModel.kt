@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 data class SettingsUiState(
@@ -29,13 +30,14 @@ data class SettingsUiState(
 class SettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val settings: SettingsRepository,
+    private val json: Json,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
     val overrideCount: StateFlow<Int> = settings.inferenceParams
-        .map { it.overrideCount() }
+        .map { it.overrideCount(json) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     private var loaded = false

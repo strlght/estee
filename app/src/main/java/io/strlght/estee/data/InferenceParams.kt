@@ -50,25 +50,20 @@ data class InferenceParams(
     @SerialName("no_language_probabilities") val noLanguageProbabilities: Boolean? = null,
 )
 
-internal val ParamsJson = Json {
-    ignoreUnknownKeys = true
-    explicitNulls = false
-}
-
 private val TEXT_PLAIN = "text/plain".toMediaType()
 
-fun InferenceParams.toFormParts(): Map<String, RequestBody> =
-    ParamsJson.encodeToJsonElement(this).jsonObject
+fun InferenceParams.toFormParts(json: Json): Map<String, RequestBody> =
+    json.encodeToJsonElement(this).jsonObject
         .filterNot { (_, value) -> value is JsonNull }
         .mapValues { (_, value) -> value.jsonPrimitive.content.toRequestBody(TEXT_PLAIN) }
 
-fun InferenceParams.toEditableValues(): Map<String, String> =
-    ParamsJson.encodeToJsonElement(this).jsonObject
+fun InferenceParams.toEditableValues(json: Json): Map<String, String> =
+    json.encodeToJsonElement(this).jsonObject
         .filterNot { (_, value) -> value is JsonNull }
         .mapValues { (_, value) -> value.jsonPrimitive.content }
 
-fun InferenceParams.overrideCount(): Int =
-    ParamsJson.encodeToJsonElement(this).jsonObject.count { (_, value) -> value !is JsonNull }
+fun InferenceParams.overrideCount(json: Json): Int =
+    json.encodeToJsonElement(this).jsonObject.count { (_, value) -> value !is JsonNull }
 
 enum class ParamKind {
     INTEGER,

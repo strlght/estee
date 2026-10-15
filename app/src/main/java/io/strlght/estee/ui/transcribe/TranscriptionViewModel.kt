@@ -10,9 +10,9 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.strlght.estee.R
-import io.strlght.estee.data.Network
 import io.strlght.estee.data.ProgressRequestBody
 import io.strlght.estee.data.SettingsRepository
+import io.strlght.estee.data.WhisperApi
 import io.strlght.estee.data.toFormParts
 import io.strlght.estee.util.runSuspendCatching
 import java.io.File
@@ -37,6 +37,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -70,8 +71,6 @@ sealed interface TranscriptionUiState {
     data class Success(
         val attachment: AudioAttachment,
         val text: String,
-        val segmentCount: Int?,
-        val detectedLanguage: String?,
     ) : TranscriptionUiState
 
     data class Failure(
@@ -84,6 +83,8 @@ sealed interface TranscriptionUiState {
 class TranscriptionViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val settings: SettingsRepository,
+    private val api: WhisperApi,
+    private val json: Json,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<TranscriptionUiState>(TranscriptionUiState.Empty)
@@ -243,15 +244,11 @@ class TranscriptionViewModel @Inject constructor(
             body,
         )
         val responseFormat = "json".toRequestBody("text/plain".toMediaTypeOrNull())
-        val overrideParts = settings.inferenceParams.first().toFormParts()
+        val overrideParts = settings.inferenceParams.first().toFormParts(json)
 
-        val response = Network.api.transcribe(endpoint, filePart, responseFormat, overrideParts)
+        val response = api.transcribe(endpoint, filePart, responseFormat, overrideParts)
         if (response.isSuccessful) {
-            val whisper = response.body()
-            val text = listOfNotNull(whisper?.transcription, whisper?.text)
-                .firstOrNull { it.isNotBlank() }
-                ?.trim()
-                .orEmpty()
+            val text = response.body()?.text?.trim().orEmpty()
             if (text.isEmpty()) {
                 _uiState.value = TranscriptionUiState.Failure(
                     attachment,
@@ -261,8 +258,6 @@ class TranscriptionViewModel @Inject constructor(
                 _uiState.value = TranscriptionUiState.Success(
                     attachment = attachment,
                     text = text,
-                    segmentCount = whisper?.segments?.size,
-                    detectedLanguage = whisper?.language,
                 )
             }
         } else {

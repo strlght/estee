@@ -68,11 +68,6 @@
 
     <string name="failure_title">Transcription failed</string>
 
-    <plurals name="segment_count">
-        <item quantity="one">%1$d segment</item>
-        <item quantity="other">%1$d segments</item>
-    </plurals>
-
     <string name="clipboard_label_transcript">Transcript</string>
     <string name="share_transcript_chooser">Share transcript</string>
 

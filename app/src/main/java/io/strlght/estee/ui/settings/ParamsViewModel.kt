@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 
 data class ParamsUiState(
     val values: Map<String, String> = emptyMap(),
@@ -26,6 +27,7 @@ data class ParamsUiState(
 class ParamsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val settings: SettingsRepository,
+    private val json: Json,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ParamsUiState())
@@ -38,7 +40,7 @@ class ParamsViewModel @Inject constructor(
             settings.inferenceParams.collect { stored ->
                 if (!loaded) {
                     loaded = true
-                    _uiState.update { it.copy(values = stored.toEditableValues()) }
+                    _uiState.update { it.copy(values = stored.toEditableValues(json)) }
                 }
             }
         }
