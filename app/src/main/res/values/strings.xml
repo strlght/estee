@@ -58,7 +58,7 @@
     <string name="params_group_misc_description">Diarization and debug switches.</string>
 
     <string name="empty_title">Share an audio file with Estee</string>
-    <string name="empty_body">Open a voice recording, audio message or sound file in another app and share it here — Estee sends it to your whisper.cpp server and shows you the transcript.</string>
+    <string name="empty_body">Open a voice recording, audio message or sound file in another app and share it here, or pick one from your device with the button above — Estee sends it to your whisper.cpp server and shows you the transcript.</string>
     <string name="empty_set_server_url">Set server URL</string>
 
     <string name="phase_preparing">Preparing file…</string>
@@ -76,6 +76,7 @@
     <string name="clipboard_label_transcript">Transcript</string>
     <string name="share_transcript_chooser">Share transcript</string>
 
+    <string name="action_pick_file">Pick a file</string>
     <string name="action_copy">Copy</string>
     <string name="action_share">Share</string>
     <string name="action_retry">Retry</string>

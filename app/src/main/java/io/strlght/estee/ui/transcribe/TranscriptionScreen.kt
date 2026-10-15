@@ -2,6 +2,8 @@ package io.strlght.estee.ui.transcribe
 
 import android.content.ClipData
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
@@ -65,11 +68,23 @@ fun TranscriptionScreen(
     val endpointConfigured by viewModel.endpointConfigured.collectAsStateWithLifecycle()
     val endpointUrl by viewModel.endpointUrl.collectAsStateWithLifecycle()
 
+    val openDocumentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        uri?.let(viewModel::handleIncomingFile)
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.app_name)) },
                 actions = {
+                    IconButton(onClick = { openDocumentLauncher.launch(PICKABLE_MIME_TYPES) }) {
+                        Icon(
+                            Icons.Filled.FolderOpen,
+                            contentDescription = stringResource(R.string.action_pick_file),
+                        )
+                    }
                     IconButton(onClick = onOpenSettings) {
                         Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.title_settings))
                     }
@@ -377,6 +392,13 @@ private fun FailureContent(
         }
     }
 }
+
+private val PICKABLE_MIME_TYPES = arrayOf(
+    "audio/*",
+    "application/ogg",
+    "application/mp4",
+    "application/x-matroska",
+)
 
 private fun formatBytes(bytes: Long): String {
     val kb = 1024.0
