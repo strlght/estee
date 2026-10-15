@@ -28,6 +28,35 @@
     <string name="error_url_empty">URL must not be empty</string>
     <string name="error_url_invalid">Not a valid URL — include http:// or https://</string>
 
+    <string name="settings_params_title">Inference parameters</string>
+    <string name="settings_params_subtitle_default">Using server defaults</string>
+    <plurals name="params_override_count">
+        <item quantity="one">%1$d override active</item>
+        <item quantity="other">%1$d overrides active</item>
+    </plurals>
+
+    <string name="title_params">Inference parameters</string>
+    <string name="params_intro">Optional overrides sent with every transcription request. Names match the whisper.cpp server fields; leave a field empty to omit it and keep the server default.</string>
+    <string name="params_default_placeholder">Server default: %1$s</string>
+    <string name="params_option_server_default">Server default (%1$s)</string>
+    <string name="params_saved">Parameters saved</string>
+    <string name="params_error_integer">Must be a whole number</string>
+    <string name="params_error_number">Not a valid number</string>
+    <string name="action_reset">Reset</string>
+
+    <string name="params_group_language">Language &amp; task</string>
+    <string name="params_group_language_description">Spoken language, translation and initial prompt. Note the server default is English, not auto-detect.</string>
+    <string name="params_group_decoding">Decoding</string>
+    <string name="params_group_decoding_description">Sampling strategy, segmentation and token options.</string>
+    <string name="params_group_thresholds">Thresholds</string>
+    <string name="params_group_thresholds_description">Quality gates that discard unreliable segments.</string>
+    <string name="params_group_range">Audio range</string>
+    <string name="params_group_range_description">Skip part of the input before transcribing.</string>
+    <string name="params_group_vad">Voice activity detection</string>
+    <string name="params_group_vad_description">Requires the server to be started with --vad and a VAD model.</string>
+    <string name="params_group_misc">Miscellaneous</string>
+    <string name="params_group_misc_description">Diarization and debug switches.</string>
+
     <string name="empty_title">Share an audio file with Estee</string>
     <string name="empty_body">Open a voice recording, audio message or sound file in another app and share it here — Estee sends it to your whisper.cpp server and shows you the transcript.</string>
     <string name="empty_set_server_url">Set server URL</string>

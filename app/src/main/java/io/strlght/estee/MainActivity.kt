@@ -16,6 +16,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
+import io.strlght.estee.ui.settings.ParamsScreen
 import io.strlght.estee.ui.settings.SettingsScreen
 import io.strlght.estee.ui.settings.SettingsViewModel
 import io.strlght.estee.ui.theme.EsteeTheme
@@ -69,6 +70,7 @@ class MainActivity : ComponentActivity() {
 private object NavRoutes {
     const val TRANSCRIBE = "transcribe"
     const val SETTINGS = "settings"
+    const val PARAMS = "settings/params"
 }
 
 @Composable
@@ -98,11 +100,22 @@ fun EsteeApp(
         composable(NavRoutes.TRANSCRIBE) {
             TranscriptionScreen(
                 viewModel = transcriptionViewModel,
-                onOpenSettings = { navController.navigate(NavRoutes.SETTINGS) },
+                onOpenSettings = {
+                    navController.navigate(NavRoutes.SETTINGS) { launchSingleTop = true }
+                },
             )
         }
         composable(NavRoutes.SETTINGS) {
             SettingsScreen(
+                viewModel = hiltViewModel(),
+                onBack = { navController.popBackStack() },
+                onOpenParams = {
+                    navController.navigate(NavRoutes.PARAMS) { launchSingleTop = true }
+                },
+            )
+        }
+        composable(NavRoutes.PARAMS) {
+            ParamsScreen(
                 viewModel = hiltViewModel(),
                 onBack = { navController.popBackStack() },
             )

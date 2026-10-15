@@ -11,6 +11,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
@@ -28,7 +30,29 @@ class SettingsRepository @Inject constructor(
         }
     }
 
+    val inferenceParams: Flow<InferenceParams> = context.settingsDataStore.data
+        .map { preferences ->
+            val stored = preferences[KEY_INFERENCE_PARAMS]
+            if (stored.isNullOrBlank()) {
+                InferenceParams()
+            } else {
+                runCatching { ParamsJson.decodeFromString<InferenceParams>(stored) }
+                    .getOrElse { InferenceParams() }
+            }
+        }
+
+    suspend fun setInferenceParams(params: InferenceParams) {
+        context.settingsDataStore.edit { preferences ->
+            if (params == InferenceParams()) {
+                preferences.remove(KEY_INFERENCE_PARAMS)
+            } else {
+                preferences[KEY_INFERENCE_PARAMS] = ParamsJson.encodeToString(params)
+            }
+        }
+    }
+
     private companion object {
         val KEY_SERVER_URL = stringPreferencesKey("server_url")
+        val KEY_INFERENCE_PARAMS = stringPreferencesKey("inference_params")
     }
 }

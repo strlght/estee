@@ -13,6 +13,7 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.Part
+import retrofit2.http.PartMap
 import retrofit2.http.Url
 import java.util.concurrent.TimeUnit
 
@@ -24,6 +25,7 @@ interface WhisperApi {
         @Url endpoint: String,
         @Part file: MultipartBody.Part,
         @Part("response_format") responseFormat: RequestBody,
+        @PartMap params: Map<String, @JvmSuppressWildcards RequestBody>,
     ): Response<WhisperResponse>
 }
 

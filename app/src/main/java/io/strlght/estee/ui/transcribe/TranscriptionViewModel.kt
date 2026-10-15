@@ -13,6 +13,7 @@ import io.strlght.estee.R
 import io.strlght.estee.data.Network
 import io.strlght.estee.data.ProgressRequestBody
 import io.strlght.estee.data.SettingsRepository
+import io.strlght.estee.data.toFormParts
 import io.strlght.estee.util.runSuspendCatching
 import java.io.File
 import java.io.IOException
@@ -242,8 +243,9 @@ class TranscriptionViewModel @Inject constructor(
             body,
         )
         val responseFormat = "json".toRequestBody("text/plain".toMediaTypeOrNull())
+        val overrideParts = settings.inferenceParams.first().toFormParts()
 
-        val response = Network.api.transcribe(endpoint, filePart, responseFormat)
+        val response = Network.api.transcribe(endpoint, filePart, responseFormat, overrideParts)
         if (response.isSuccessful) {
             val whisper = response.body()
             val text = listOfNotNull(whisper?.transcription, whisper?.text)
