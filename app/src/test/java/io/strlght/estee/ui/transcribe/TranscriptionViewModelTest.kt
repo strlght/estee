@@ -321,6 +321,193 @@ class TranscriptionViewModelTest : DescribeSpec({
         }
     }
 
+    describe("run with new parameters") {
+
+        it("re-runs with one-shot overrides and reuses the staged file") {
+            runTest {
+                every { settings.inferenceParams } returns flowOf(InferenceParams(language = "en"))
+                server.enqueue(MockResponse().setBody(TRANSCRIPT_OK))
+                val vm = newViewModel()
+
+                vm.handleIncomingFile(uri)
+                vm.uiState.first { it is TranscriptionUiState.Success }
+                formValue(server.takeRequest().body.readUtf8(), "language") shouldBe "en"
+
+                server.enqueue(MockResponse().setBody(TRANSCRIPT_OK))
+                vm.rerunWithParams(InferenceParams(language = "pl", bestOf = 5))
+                vm.uiState.first { it is TranscriptionUiState.Success }
+                val body = server.takeRequest().body.readUtf8()
+                formValue(body, "language") shouldBe "pl"
+                formValue(body, "best_of") shouldBe "5"
+
+                server.requestCount shouldBe 2
+                coVerify(exactly = 1) { resolver.openInputStream(any()) }
+                coVerify(exactly = 0) { settings.setInferenceParams(any()) }
+                vm.clear()
+            }
+        }
+
+        it("re-stages from the uri when the staged file vanished") {
+            runTest {
+                server.enqueue(MockResponse().setBody(TRANSCRIPT_OK))
+                val vm = newViewModel()
+
+                vm.handleIncomingFile(uri)
+                vm.uiState.first { it is TranscriptionUiState.Success }
+                server.takeRequest()
+
+                val staged = (vm.uiState.value as TranscriptionUiState.Success)
+                    .attachment.stagedFile
+                checkNotNull(staged).delete()
+
+                server.enqueue(MockResponse().setBody(TRANSCRIPT_OK))
+                vm.rerunWithParams(InferenceParams(translate = true))
+                vm.uiState.first { it is TranscriptionUiState.Success }
+                formValue(server.takeRequest().body.readUtf8(), "translate") shouldBe "true"
+
+                coVerify(exactly = 2) { resolver.openInputStream(any()) }
+                coVerify(exactly = 0) { settings.setInferenceParams(any()) }
+                vm.clear()
+            }
+        }
+
+        it("does nothing when there is no previous submission") {
+            runTest {
+                val vm = newViewModel()
+
+                vm.rerunWithParams(InferenceParams(language = "pl"))
+
+                server.requestCount shouldBe 0
+                vm.uiState.value shouldBe TranscriptionUiState.Empty
+            }
+        }
+
+        it("re-runs from a failure with overrides and reuses the staged file") {
+            runTest {
+                every { settings.inferenceParams } returns flowOf(InferenceParams(language = "en"))
+                server.enqueue(MockResponse().setResponseCode(500).setBody("boom"))
+                val vm = newViewModel()
+
+                vm.handleIncomingFile(uri)
+                vm.uiState.first { it is TranscriptionUiState.Failure }
+                formValue(server.takeRequest().body.readUtf8(), "language") shouldBe "en"
+
+                server.enqueue(MockResponse().setBody(TRANSCRIPT_OK))
+                vm.rerunWithParams(InferenceParams(language = "de"))
+                vm.uiState.first { it is TranscriptionUiState.Success }
+                formValue(server.takeRequest().body.readUtf8(), "language") shouldBe "de"
+
+                server.requestCount shouldBe 2
+                coVerify(exactly = 1) { resolver.openInputStream(any()) }
+                vm.clear()
+            }
+        }
+
+        it("retry after a failed re-run repeats the same overrides") {
+            runTest {
+                every { settings.inferenceParams } returns flowOf(InferenceParams(language = "en"))
+                server.enqueue(MockResponse().setBody(TRANSCRIPT_OK))
+                val vm = newViewModel()
+
+                vm.handleIncomingFile(uri)
+                vm.uiState.first { it is TranscriptionUiState.Success }
+                formValue(server.takeRequest().body.readUtf8(), "language") shouldBe "en"
+
+                server.enqueue(MockResponse().setResponseCode(500).setBody("boom"))
+                vm.rerunWithParams(InferenceParams(language = "pl"))
+                vm.uiState.first { it is TranscriptionUiState.Failure }
+                formValue(server.takeRequest().body.readUtf8(), "language") shouldBe "pl"
+
+                server.enqueue(MockResponse().setBody(TRANSCRIPT_OK))
+                vm.retry()
+                vm.uiState.first { it is TranscriptionUiState.Success }
+                formValue(server.takeRequest().body.readUtf8(), "language") shouldBe "pl"
+
+                server.requestCount shouldBe 3
+                coVerify(exactly = 1) { resolver.openInputStream(any()) }
+                coVerify(exactly = 0) { settings.setInferenceParams(any()) }
+                vm.clear()
+            }
+        }
+
+        it("is ignored while a transcription is in progress") {
+            runTest {
+                server.enqueue(
+                    MockResponse()
+                        .setBody(TRANSCRIPT_OK)
+                        .setBodyDelay(200, TimeUnit.MILLISECONDS),
+                )
+                val vm = newViewModel()
+
+                vm.handleIncomingFile(uri)
+                vm.uiState.first { it is TranscriptionUiState.Working }
+
+                vm.rerunWithParams(InferenceParams(language = "pl"))
+
+                vm.uiState.first { it is TranscriptionUiState.Success }
+                server.requestCount shouldBe 1
+                vm.clear()
+            }
+        }
+
+        it("sends no param parts for a fully cleared override") {
+            runTest {
+                every { settings.inferenceParams } returns flowOf(InferenceParams(language = "en"))
+                server.enqueue(MockResponse().setBody(TRANSCRIPT_OK))
+                val vm = newViewModel()
+
+                vm.handleIncomingFile(uri)
+                vm.uiState.first { it is TranscriptionUiState.Success }
+                formValue(server.takeRequest().body.readUtf8(), "language") shouldBe "en"
+
+                server.enqueue(MockResponse().setBody(TRANSCRIPT_OK))
+                vm.rerunWithParams(InferenceParams())
+                vm.uiState.first { it is TranscriptionUiState.Success }
+                server.takeRequest().body.readUtf8() shouldNotContain "name=\"language\""
+
+                vm.clear()
+            }
+        }
+    }
+
+    describe("rerun sheet visibility") {
+
+        it("open and close toggle the sheet flag") {
+            runTest {
+                val vm = newViewModel()
+
+                vm.openRerunSheet()
+                vm.showRerunSheet.value shouldBe true
+
+                vm.closeRerunSheet()
+                vm.showRerunSheet.value shouldBe false
+            }
+        }
+
+        it("starting any run or clearing closes an open sheet") {
+            runTest {
+                val vm = newViewModel()
+
+                vm.openRerunSheet()
+                vm.handleIncomingFile(uri)
+                vm.showRerunSheet.value shouldBe false
+
+                server.enqueue(MockResponse().setBody(TRANSCRIPT_OK))
+                vm.uiState.first { it is TranscriptionUiState.Success }
+
+                vm.openRerunSheet()
+                server.enqueue(MockResponse().setBody(TRANSCRIPT_OK))
+                vm.rerunWithParams(InferenceParams(language = "pl"))
+                vm.showRerunSheet.value shouldBe false
+
+                vm.uiState.first { it is TranscriptionUiState.Success }
+                vm.openRerunSheet()
+                vm.clear()
+                vm.showRerunSheet.value shouldBe false
+            }
+        }
+    }
+
     describe("cancel and clear") {
 
         it("cancel resets state to empty") {

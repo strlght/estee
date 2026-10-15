@@ -10,9 +10,11 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.strlght.estee.R
+import io.strlght.estee.data.InferenceParams
 import io.strlght.estee.data.ProgressRequestBody
 import io.strlght.estee.data.SettingsRepository
 import io.strlght.estee.data.WhisperApi
+import io.strlght.estee.data.toEditableValues
 import io.strlght.estee.data.toFormParts
 import io.strlght.estee.util.runSuspendCatching
 import java.io.File
@@ -29,6 +31,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -90,7 +94,11 @@ class TranscriptionViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<TranscriptionUiState>(TranscriptionUiState.Empty)
     val uiState: StateFlow<TranscriptionUiState> = _uiState
 
+    private val _showRerunSheet = MutableStateFlow(false)
+    val showRerunSheet: StateFlow<Boolean> = _showRerunSheet.asStateFlow()
+
     private val _lastSubmittedUri = MutableStateFlow<Uri?>(null)
+    private val _lastOverride = MutableStateFlow<InferenceParams?>(null)
 
     val endpointUrl: StateFlow<String> = settings.serverUrl
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
@@ -99,14 +107,34 @@ class TranscriptionViewModel @Inject constructor(
         .map { it.isNotBlank() && it.toHttpUrlOrNull() != null }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
+    val editableParams: StateFlow<Map<String, String>> = settings.inferenceParams
+        .map { it.toEditableValues(json) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    val rerunSeed: StateFlow<Map<String, String>> =
+        combine(_lastOverride, settings.inferenceParams) { override, stored ->
+            (override ?: stored).toEditableValues(json)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
     private var transcriptionJob: Job? = null
 
+    fun openRerunSheet() {
+        _showRerunSheet.value = true
+    }
+
+    fun closeRerunSheet() {
+        _showRerunSheet.value = false
+    }
+
     fun handleIncomingFile(uri: Uri) {
+        _showRerunSheet.value = false
         _lastSubmittedUri.value = uri
+        _lastOverride.value = null
         startTranscription(uri)
     }
 
     fun retry() {
+        _showRerunSheet.value = false
         val failure = _uiState.value as? TranscriptionUiState.Failure
         val attachment = failure?.attachment
         val staged = attachment?.stagedFile?.takeIf { it.exists() && it.length() > 0L }
@@ -114,27 +142,50 @@ class TranscriptionViewModel @Inject constructor(
         transcriptionJob?.cancel()
         if (attachment != null && staged != null) {
             transcriptionJob = viewModelScope.launch {
-                uploadWithStagedFile(attachment.copy(stagedFile = staged))
+                uploadWithStagedFile(attachment.copy(stagedFile = staged), _lastOverride.value)
             }
         } else {
-            _lastSubmittedUri.value?.let(::startTranscription)
+            _lastSubmittedUri.value?.let { startTranscription(it, _lastOverride.value) }
+        }
+    }
+
+    fun rerunWithParams(params: InferenceParams) {
+        _showRerunSheet.value = false
+        val attachment = when (val current = _uiState.value) {
+            is TranscriptionUiState.Success -> current.attachment
+            is TranscriptionUiState.Failure -> current.attachment
+            else -> null
+        } ?: return
+
+        _lastOverride.value = params
+        transcriptionJob?.cancel()
+        val staged = attachment.stagedFile?.takeIf { it.exists() && it.length() > 0L }
+        if (staged != null) {
+            transcriptionJob = viewModelScope.launch {
+                uploadWithStagedFile(attachment.copy(stagedFile = staged), params)
+            }
+        } else {
+            startTranscription(attachment.uri, params)
         }
     }
 
     fun cancel() {
+        _showRerunSheet.value = false
         transcriptionJob?.cancel()
         transcriptionJob = null
         _uiState.value = TranscriptionUiState.Empty
     }
 
     fun clear() {
+        _showRerunSheet.value = false
         transcriptionJob?.cancel()
         transcriptionJob = null
         _lastSubmittedUri.value = null
+        _lastOverride.value = null
         _uiState.value = TranscriptionUiState.Empty
     }
 
-    private fun startTranscription(uri: Uri) {
+    private fun startTranscription(uri: Uri, paramsOverride: InferenceParams? = null) {
         transcriptionJob?.cancel()
         transcriptionJob = viewModelScope.launch {
             val resolver = context.contentResolver
@@ -168,11 +219,14 @@ class TranscriptionViewModel @Inject constructor(
                 return@launch
             }
 
-            uploadWithStagedFile(attachment.copy(stagedFile = staged))
+            uploadWithStagedFile(attachment.copy(stagedFile = staged), paramsOverride)
         }
     }
 
-    private suspend fun uploadWithStagedFile(attachment: AudioAttachment) {
+    private suspend fun uploadWithStagedFile(
+        attachment: AudioAttachment,
+        paramsOverride: InferenceParams? = null,
+    ) {
         val staged = attachment.stagedFile ?: return
 
         val endpoint = settings.serverUrl.first().trim()
@@ -206,7 +260,7 @@ class TranscriptionViewModel @Inject constructor(
                 }
             }
             try {
-                runSuspendCatching { transcribe(endpoint, attachment, staged) }
+                runSuspendCatching { transcribe(endpoint, attachment, staged, paramsOverride) }
                     .onFailure { error ->
                         _uiState.value = TranscriptionUiState.Failure(attachment, describe(error))
                     }
@@ -220,6 +274,7 @@ class TranscriptionViewModel @Inject constructor(
         endpoint: String,
         attachment: AudioAttachment,
         staged: File,
+        paramsOverride: InferenceParams? = null,
     ) {
         val body = ProgressRequestBody(
             file = staged,
@@ -244,7 +299,7 @@ class TranscriptionViewModel @Inject constructor(
             body,
         )
         val responseFormat = "json".toRequestBody("text/plain".toMediaTypeOrNull())
-        val overrideParts = settings.inferenceParams.first().toFormParts(json)
+        val overrideParts = (paramsOverride ?: settings.inferenceParams.first()).toFormParts(json)
 
         val response = api.transcribe(endpoint, filePart, responseFormat, overrideParts)
         if (response.isSuccessful) {

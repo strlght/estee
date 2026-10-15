@@ -68,6 +68,12 @@
 
     <string name="failure_title">Transcription failed</string>
 
+    <string name="action_rerun_params">Re-run with new parameters</string>
+    <string name="rerun_sheet_title">Re-run with new parameters</string>
+    <string name="rerun_sheet_intro">Overrides here apply to this re-run only — your saved parameters in Settings stay unchanged. Leave a field empty to keep the server default.</string>
+    <string name="action_run_again">Run again</string>
+    <string name="action_reset_to_saved">Reset to saved</string>
+
     <string name="clipboard_label_transcript">Transcript</string>
     <string name="share_transcript_chooser">Share transcript</string>
 
