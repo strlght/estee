@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Estee</string>
 
     <string name="error_file_too_large">File is larger than %1$d MB — refusing to upload.</string>
@@ -53,7 +53,7 @@
     <string name="params_group_range">Audio range</string>
     <string name="params_group_range_description">Skip part of the input before transcribing.</string>
     <string name="params_group_vad">Voice activity detection</string>
-    <string name="params_group_vad_description">Requires the server to be started with --vad and a VAD model.</string>
+    <string name="params_group_vad_description" tools:ignore="TypographyDashes">Requires the server to be started with --vad and a VAD model.</string>
     <string name="params_group_misc">Miscellaneous</string>
     <string name="params_group_misc_description">Diarization and debug switches.</string>
 

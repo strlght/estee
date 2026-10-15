@@ -35,8 +35,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
@@ -54,7 +54,6 @@ fun SettingsScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val overrideCount by viewModel.overrideCount.collectAsStateWithLifecycle()
-    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val focusManager = LocalFocusManager.current
     val savedMessage = stringResource(R.string.settings_saved)
@@ -131,11 +130,7 @@ fun SettingsScreen(
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             val paramsSubtitle = if (overrideCount > 0) {
-                context.resources.getQuantityString(
-                    R.plurals.params_override_count,
-                    overrideCount,
-                    overrideCount,
-                )
+                pluralStringResource(R.plurals.params_override_count, overrideCount, overrideCount)
             } else {
                 stringResource(R.string.settings_params_subtitle_default)
             }
