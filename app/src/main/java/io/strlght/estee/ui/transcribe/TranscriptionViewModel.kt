@@ -16,6 +16,7 @@ import io.strlght.estee.data.SettingsRepository
 import io.strlght.estee.data.WhisperApi
 import io.strlght.estee.data.toEditableValues
 import io.strlght.estee.data.toFormParts
+import io.strlght.estee.di.IoDispatcher
 import io.strlght.estee.util.runSuspendCatching
 import java.io.File
 import java.io.IOException
@@ -24,7 +25,7 @@ import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import javax.inject.Inject
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -89,6 +90,7 @@ class TranscriptionViewModel @Inject constructor(
     private val settings: SettingsRepository,
     private val api: WhisperApi,
     private val json: Json,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<TranscriptionUiState>(TranscriptionUiState.Empty)
@@ -141,7 +143,7 @@ class TranscriptionViewModel @Inject constructor(
 
         transcriptionJob?.cancel()
         if (attachment != null && staged != null) {
-            transcriptionJob = viewModelScope.launch {
+            transcriptionJob = viewModelScope.launch(ioDispatcher) {
                 uploadWithStagedFile(attachment.copy(stagedFile = staged), _lastOverride.value)
             }
         } else {
@@ -161,7 +163,7 @@ class TranscriptionViewModel @Inject constructor(
         transcriptionJob?.cancel()
         val staged = attachment.stagedFile?.takeIf { it.exists() && it.length() > 0L }
         if (staged != null) {
-            transcriptionJob = viewModelScope.launch {
+            transcriptionJob = viewModelScope.launch(ioDispatcher) {
                 uploadWithStagedFile(attachment.copy(stagedFile = staged), params)
             }
         } else {
@@ -187,11 +189,11 @@ class TranscriptionViewModel @Inject constructor(
 
     private fun startTranscription(uri: Uri, paramsOverride: InferenceParams? = null) {
         transcriptionJob?.cancel()
-        transcriptionJob = viewModelScope.launch {
+        transcriptionJob = viewModelScope.launch(ioDispatcher) {
             val resolver = context.contentResolver
 
             val attachment = runSuspendCatching {
-                withContext(Dispatchers.IO) { resolveAttachment(resolver, uri) }
+                withContext(ioDispatcher) { resolveAttachment(resolver, uri) }
             }.getOrElse { error ->
                 _uiState.value = TranscriptionUiState.Failure(null, describe(error))
                 return@launch
@@ -213,7 +215,7 @@ class TranscriptionViewModel @Inject constructor(
             )
 
             val staged = runSuspendCatching {
-                withContext(Dispatchers.IO) { stageInCache(resolver, attachment) }
+                withContext(ioDispatcher) { stageInCache(resolver, attachment) }
             }.getOrElse { error ->
                 _uiState.value = TranscriptionUiState.Failure(attachment, describe(error))
                 return@launch

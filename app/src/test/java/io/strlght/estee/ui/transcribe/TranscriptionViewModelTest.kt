@@ -24,6 +24,7 @@ import java.io.ByteArrayInputStream
 import java.nio.file.Files
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -52,15 +53,17 @@ class TranscriptionViewModelTest : DescribeSpec({
     lateinit var settings: SettingsRepository
     lateinit var server: MockWebServer
     lateinit var uri: Uri
+    lateinit var ioDispatcher: CoroutineDispatcher
     var audioBytes: ByteArray = ByteArray(0)
 
     fun newViewModel(endpoint: String = server.url("/inference").toString()): TranscriptionViewModel {
         every { settings.serverUrl } returns flowOf(endpoint)
-        return TranscriptionViewModel(context, settings, whisperApi(server), TestJson)
+        return TranscriptionViewModel(context, settings, whisperApi(server), TestJson, ioDispatcher)
     }
 
     beforeAny {
         Dispatchers.setMain(UnconfinedTestDispatcher())
+        ioDispatcher = UnconfinedTestDispatcher()
         audioBytes = audioPayload(1000)
         server = MockWebServer()
         server.start()
